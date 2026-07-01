@@ -156,7 +156,7 @@ Le LC86k possède 70 instructions (p561) :
 | st | 0x12–0x13 | 🟢 | Oui | |
 | st_ri | 0x14–0x17 | 🟢 | Non | |
 | callf | 0x20 | 🟢 | Non | |
-| jmpf | 0x21 | 🔴 | Non | |
+| jmpf | 0x21 | 🟢 | Non | |
 | mov | 0x22–0x23 | 🟢 | Non | |
 | mov_ri | 0x24–0x27 | 🟢 | Non | |
 | jmp_a12 | 0x28–0x2F, 0x38–0x3F | 🔴 | Non | |
@@ -219,10 +219,10 @@ Le LC86k possède 70 instructions (p561) :
 
 | Status | Nb instructions |
 |--------|:--------------:|
-| 🟢 implémenté | 63 |
-| 🔴 manquant | 7 |
+| 🟢 implémenté | 64 |
+| 🔴 manquant | 6 |
 
-**Tests :** 43/43 passent ✅ (`zig build test`)
+**Tests :** 44/44 passent ✅ (`zig build test`)
 
 ## TODO
 
@@ -237,18 +237,14 @@ Le LC86k possède 70 instructions (p561) :
 - [ ] Registres de fonction spéciale (SFR) — ~40 registres avec effets de bord
 - [ ] `decodeD9` : gérer le bit d8 à la bonne position (bit 0 standard, bit 4 pour bit-ops)
 - [ ] Adressage indirect @Ri : registres 8-bit, MSB = Ri.1, bancs IRBK
-- [x] Tests unitaires (43 tests, inspirés DreamPotato) ✅
+- [x] Tests unitaires (44 tests, inspirés DreamPotato) ✅
 - [ ] Désassembleur
 
-### Instructions restantes (21)
-- [ ] brf, callf, jmpf, jmp_a12 — sauts/appels
-- [x] mov, mov_ri — MOV #i8,d9 / @Ri ✅
-- [ ] be_imm, be_d9, be_ri — branchement égal
-- [ ] bne_imm, bne_d9, bne_ri — branchement différent
+### Instructions restantes (18)
+- [ ] jmp_a12 — saut 12-bit
 - [ ] bpc — branch si bit set + clear
 - [ ] dbnz_d9, dbnz_ri — décrémente et branche
-- [ ] ret, reti — retour
-- [ ] not1, clr1, set1 — opérations bit
+- [ ] reti — retour interrupt
 - [ ] ldc — load depuis ROM via TRH/TRL
 
 ### Bugs à corriger
