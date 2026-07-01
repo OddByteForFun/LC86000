@@ -1,0 +1,12 @@
+.{
+    .name = .lc86K,
+    .version = "0.0.0",
+    .fingerprint = 0xf11988f9b6ae9f02,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "lc86K.zig",
+    },
+}

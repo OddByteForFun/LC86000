@@ -1,0 +1,544 @@
+const std = @import("std");
+const Cpu = @import("lc86K").Cpu;
+
+// https://mc.pp.se/dc/vms/cpu.html
+
+pub const AddressingMode = enum(u2) {
+    impl,
+    imm,
+    d9,
+    ri,
+};
+
+pub const Inst = enum(u8) {
+    nop,
+    br,
+    ld,
+    ld_ri,
+    call_a12,
+    callr,
+    brf,
+    st,
+    st_ri,
+    callf,
+    jmpf,
+    mov,
+    mov_ri,
+    jmp_a12,
+    mul,
+    be_imm,
+    be_d9,
+    be_ri,
+    div,
+    bne_imm,
+    bne_d9,
+    bne_ri,
+    bpc,
+    dbnz_d9,
+    dbnz_ri,
+    push,
+    inc_d9,
+    inc_ri,
+    bp,
+    pop,
+    dec_d9,
+    dec_ri,
+    bz,
+    add_imm,
+    add_d9,
+    add_ri,
+    bn,
+    bnz,
+    addc_imm,
+    addc_d9,
+    addc_ri,
+    ret,
+    sub_imm,
+    sub_d9,
+    sub_ri,
+    not1,
+    reti,
+    subc_imm,
+    subc_d9,
+    subc_ri,
+    ror,
+    ldc,
+    xch_d9,
+    xch_ri,
+    clr1,
+    rorc,
+    or_imm,
+    or_d9,
+    or_ri,
+    rol,
+    and_imm,
+    and_d9,
+    and_ri,
+    set1,
+    rolc,
+    xor_imm,
+    xor_d9,
+    xor_ri,
+};
+
+pub const DecodeResult = struct {
+    inst: Inst,
+    opcode: u8,
+    mode: AddressingMode = .impl,
+    ri: ?u8 = null,
+    bit: ?u8 = null,
+};
+
+fn decodeOpcode(opcode: u8) DecodeResult {
+    const row: u4 = @truncate(opcode >> 4);
+    const col: u4 = @truncate(opcode);
+    return switch (row) {
+        0x0 => switch (col) {
+            0x0 => .{ .inst = .nop, .opcode = opcode },
+            0x1 => .{ .inst = .br, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .ld, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .ld_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .call_a12, .opcode = opcode, .mode = .imm },
+        },
+        0x1 => switch (col) {
+            0x0 => .{ .inst = .callr, .opcode = opcode, .mode = .imm },
+            0x1 => .{ .inst = .brf, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .st, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .st_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .call_a12, .opcode = opcode, .mode = .imm },
+        },
+        0x2 => switch (col) {
+            0x0 => .{ .inst = .callf, .opcode = opcode, .mode = .imm },
+            0x1 => .{ .inst = .jmpf, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .mov, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .mov_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .jmp_a12, .opcode = opcode, .mode = .imm },
+        },
+        0x3 => switch (col) {
+            0x0 => .{ .inst = .mul, .opcode = opcode },
+            0x1 => .{ .inst = .be_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .be_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .be_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .jmp_a12, .opcode = opcode, .mode = .imm },
+        },
+        0x4 => switch (col) {
+            0x0 => .{ .inst = .div, .opcode = opcode },
+            0x1 => .{ .inst = .bne_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .bne_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .bne_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bpc, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0x5 => switch (col) {
+            0x0...0x1 => unreachable,
+            0x2...0x3 => .{ .inst = .dbnz_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .dbnz_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bpc, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0x6 => switch (col) {
+            0x0...0x1 => .{ .inst = .push, .opcode = opcode, .mode = .d9 },
+            0x2...0x3 => .{ .inst = .inc_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .inc_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bp, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0x7 => switch (col) {
+            0x0...0x1 => .{ .inst = .pop, .opcode = opcode, .mode = .d9 },
+            0x2...0x3 => .{ .inst = .dec_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .dec_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bp, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0x8 => switch (col) {
+            0x0 => .{ .inst = .bz, .opcode = opcode, .mode = .imm },
+            0x1 => .{ .inst = .add_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .add_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .add_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bn, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0x9 => switch (col) {
+            0x0 => .{ .inst = .bnz, .opcode = opcode, .mode = .imm },
+            0x1 => .{ .inst = .addc_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .addc_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .addc_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .bn, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xA => switch (col) {
+            0x0 => .{ .inst = .ret, .opcode = opcode },
+            0x1 => .{ .inst = .sub_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .sub_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .sub_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .not1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xB => switch (col) {
+            0x0 => .{ .inst = .reti, .opcode = opcode },
+            0x1 => .{ .inst = .subc_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .subc_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .subc_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .not1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xC => switch (col) {
+            0x0 => .{ .inst = .ror, .opcode = opcode },
+            0x1 => .{ .inst = .ldc, .opcode = opcode },
+            0x2...0x3 => .{ .inst = .xch_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .xch_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .clr1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xD => switch (col) {
+            0x0 => .{ .inst = .rorc, .opcode = opcode },
+            0x1 => .{ .inst = .or_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .or_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .or_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .clr1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xE => switch (col) {
+            0x0 => .{ .inst = .rol, .opcode = opcode },
+            0x1 => .{ .inst = .and_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .and_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .and_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .set1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+        0xF => switch (col) {
+            0x0 => .{ .inst = .rolc, .opcode = opcode },
+            0x1 => .{ .inst = .xor_imm, .opcode = opcode, .mode = .imm },
+            0x2...0x3 => .{ .inst = .xor_d9, .opcode = opcode, .mode = .d9 },
+            0x4...0x7 => .{ .inst = .xor_ri, .opcode = opcode, .mode = .ri, .ri = col & 0x3 },
+            0x8...0xF => .{ .inst = .set1, .opcode = opcode, .mode = .d9, .bit = opcode & 0x7 },
+        },
+    };
+}
+
+fn cycles(dec: DecodeResult) u8 {
+    return switch (dec.inst) {
+        .nop => 1,
+        .br => 2,
+        .ld, .ld_ri => 1,
+        .call_a12 => 2,
+        .callr => 4,
+        .brf => 4,
+        .st, .st_ri => 1,
+        .callf => 2,
+        .jmpf => 2,
+        .mov => 2,
+        .mov_ri => 1,
+        .jmp_a12 => 2,
+        .mul => 7,
+        .be_imm, .be_d9, .be_ri => 2,
+        .div => 7,
+        .bne_imm, .bne_d9, .bne_ri => 2,
+        .bpc => 2,
+        .dbnz_d9, .dbnz_ri => 2,
+        .push => 2,
+        .inc_d9, .inc_ri => 1,
+        .bp => 2,
+        .pop => 2,
+        .dec_d9, .dec_ri => 1,
+        .bz => 2,
+        .add_imm, .add_d9, .add_ri => 1,
+        .bn => 2,
+        .bnz => 2,
+        .addc_imm, .addc_d9, .addc_ri => 1,
+        .ret => 2,
+        .sub_imm, .sub_d9, .sub_ri => 1,
+        .not1 => 1,
+        .reti => 2,
+        .subc_imm, .subc_d9, .subc_ri => 1,
+        .ror => 1,
+        .ldc => 2,
+        .xch_d9, .xch_ri => 1,
+        .clr1 => 1,
+        .rorc => 1,
+        .or_imm, .or_d9, .or_ri => 1,
+        .rol => 1,
+        .and_imm, .and_d9, .and_ri => 1,
+        .set1 => 1,
+        .rolc => 1,
+        .xor_imm, .xor_d9, .xor_ri => 1,
+    };
+}
+
+pub fn step(cpu: *Cpu) u8 {
+    const opcode = cpu.fetch8();
+    const dec = decodeOpcode(opcode);
+    switch (dec.inst) {
+        .nop => {},
+        .br => {
+            const rel: u16 = @bitCast(@as(i16, @as(i8, @bitCast(cpu.fetch8()))));
+            cpu.pc +%= rel;
+        },
+        .brf => {
+            const r16 = cpu.fetch16();
+            cpu.pc +%= r16 -% 1;
+        },
+        .bz => {
+            const offset = cpu.fetch8();
+            if (cpu.a == 0) cpu.pc +%= signExt8(offset);
+        },
+        .bnz => {
+            const offset = cpu.fetch8();
+            if (cpu.a != 0) cpu.pc +%= signExt8(offset);
+        },
+
+        .add_imm, .add_d9, .add_ri => {
+            const v = readOp8(cpu, dec);
+            const result: u16 = @as(u16, cpu.a) + @as(u16, v);
+            cpu.psw.cy = result > 0xFF;
+            cpu.psw.ac = (cpu.a & 0xF) + (v & 0xF) > 0xF;
+            cpu.psw.ov = (@as(u1, @truncate(cpu.a >> 7)) == @as(u1, @truncate(v >> 7))) and
+                (@as(u1, @truncate(cpu.a >> 7)) != @as(u1, @truncate(result >> 7)));
+            cpu.a = @truncate(result);
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .addc_imm, .addc_d9, .addc_ri => {
+            const v = readOp8(cpu, dec);
+            const carry: u16 = @intFromBool(cpu.psw.cy);
+            const result: u16 = @as(u16, cpu.a) + @as(u16, v) + carry;
+            cpu.psw.cy = result > 0xFF;
+            cpu.psw.ac = (cpu.a & 0xF) + (v & 0xF) + @as(u4, @intFromBool(cpu.psw.cy)) > 0xF;
+            cpu.psw.ov = (@as(u1, @truncate(cpu.a >> 7)) == @as(u1, @truncate(v >> 7))) and
+                (@as(u1, @truncate(cpu.a >> 7)) != @as(u1, @truncate(result >> 7)));
+            cpu.a = @truncate(result);
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .sub_imm, .sub_d9, .sub_ri => {
+            const v = readOp8(cpu, dec);
+            const result: i16 = @as(i16, cpu.a) - @as(i16, v);
+            const r_u8: u8 = @truncate(@as(u16, @bitCast(result)));
+            const sa: u1 = @truncate(cpu.a >> 7);
+            const sv: u1 = @truncate(v >> 7);
+            const sr: u1 = @truncate(r_u8 >> 7);
+            cpu.psw.cy = result < 0;
+            cpu.psw.ac = (cpu.a & 0xF) < (v & 0xF);
+            cpu.psw.ov = (sa != sv) and (sa != sr);
+            cpu.a = r_u8;
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .subc_imm, .subc_d9, .subc_ri => {
+            const v = readOp8(cpu, dec);
+            const carry: i16 = @intFromBool(cpu.psw.cy);
+            const result: i16 = @as(i16, cpu.a) - @as(i16, v) - carry;
+            const r_u8: u8 = @truncate(@as(u16, @bitCast(result)));
+            const sa: u1 = @truncate(cpu.a >> 7);
+            const sv: u1 = @truncate(v >> 7);
+            const sr: u1 = @truncate(r_u8 >> 7);
+            cpu.psw.cy = result < 0;
+            cpu.psw.ac = (cpu.a & 0xF) < (v & 0xF) + @as(u4, @intFromBool(cpu.psw.cy));
+            cpu.psw.ov = (sa != sv) and (sa != sr);
+            cpu.a = r_u8;
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .and_imm, .and_d9, .and_ri => {
+            cpu.a &= readOp8(cpu, dec);
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .or_imm, .or_d9, .or_ri => {
+            cpu.a |= readOp8(cpu, dec);
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+        .xor_imm, .xor_d9, .xor_ri => {
+            cpu.a ^= readOp8(cpu, dec);
+            cpu.psw.p = @popCount(cpu.a) % 2 == 1;
+        },
+
+        .inc_d9, .inc_ri => {
+            const addr = readEA(cpu, dec);
+            const val = cpu.load8(addr) +% 1;
+            cpu.store8(addr, val);
+            cpu.psw.p = @popCount(val) % 2 == 1;
+        },
+        .dec_d9, .dec_ri => {
+            const addr = readEA(cpu, dec);
+            const val = cpu.load8(addr) -% 1;
+            cpu.store8(addr, val);
+            cpu.psw.p = @popCount(val) % 2 == 1;
+        },
+
+        .ld => {
+            const addr = readEA(cpu, dec);
+            cpu.a = cpu.load8(addr);
+        },
+        .ld_ri => {
+            const addr = readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?)));
+            cpu.a = cpu.load8(addr);
+        },
+        .st => {
+            const addr = readEA(cpu, dec);
+            cpu.store8(addr, cpu.a);
+        },
+        .st_ri => {
+            const addr = readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?)));
+            cpu.store8(addr, cpu.a);
+        },
+
+        .push => {
+            const addr = readEA(cpu, dec);
+            const val = cpu.load8(addr);
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = val;
+        },
+        .pop => {
+            const addr = readEA(cpu, dec);
+            const val = cpu.ram_bank0[cpu.sp];
+            cpu.sp -%= 1;
+            cpu.store8(addr, val);
+        },
+
+        .xch_d9, .xch_ri => {
+            const addr = readEA(cpu, dec);
+            const tmp = cpu.load8(addr);
+            cpu.store8(addr, cpu.a);
+            cpu.a = tmp;
+        },
+
+        .mul => {
+            // (B) (ACC) (C) <- (ACC) (C) * (B)
+            const operand: u16 = (@as(u16, cpu.a) << 8) | @as(u16, cpu.c);
+            const result: u24 = @as(u24, operand) * @as(u24, cpu.b);
+            cpu.b = @truncate(result >> 16);
+            cpu.a = @truncate(result >> 8);
+            cpu.c = @truncate(result);
+            cpu.psw.cy = false;
+            cpu.psw.ov = result > 0xFFFF;
+        },
+        .div => {
+            // (ACC) (C), mod(B) <- (ACC) (C) / (B)
+            if (cpu.b == 0) {
+                cpu.a = 0xFF;
+                cpu.psw.ov = true;
+            } else {
+                const operand: u16 = (@as(u16, cpu.a) << 8) | @as(u16, cpu.c);
+                const result: u16 = operand / @as(u16, cpu.b);
+                const mod: u16 = operand % @as(u16, cpu.b);
+                cpu.a = @truncate(result >> 8);
+                cpu.c = @truncate(result);
+                cpu.b = @truncate(mod);
+                cpu.psw.ov = false;
+            }
+            cpu.psw.cy = false;
+        },
+        .ror => {
+            cpu.psw.cy = (cpu.a & 1) == 1;
+            cpu.a = (cpu.a >> 1) | ((cpu.a & 1) << 7);
+        },
+        .rol => {
+            cpu.psw.cy = (cpu.a >> 7) == 1;
+            cpu.a = (cpu.a << 1) | (cpu.a >> 7);
+        },
+        .rorc => {
+            const old_c = @as(u8, @intFromBool(cpu.psw.cy));
+            cpu.psw.cy = (cpu.a & 1) == 1;
+            cpu.a = (old_c << 7) | (cpu.a >> 1);
+        },
+        .rolc => {
+            const old_c = @as(u8, @intFromBool(cpu.psw.cy));
+            cpu.psw.cy = (cpu.a >> 7) == 1;
+            cpu.a = (cpu.a << 1) | old_c;
+        },
+        .bn => {
+            const addr = readEA(cpu, dec);
+            const bit = @as(u3, @intCast(dec.bit.?));
+            const r8 = cpu.fetch8();
+            const val = cpu.load8(addr);
+            if ((val >> bit) & 1 == 0)
+                cpu.pc +%= signExt8(r8);
+        },
+        .bp => {
+            const addr = readEA(cpu, dec);
+            const bit = @as(u3, @intCast(dec.bit.?));
+            const r8 = cpu.fetch8();
+            const val = cpu.load8(addr);
+            if ((val >> bit) & 1 != 0)
+                cpu.pc +%= signExt8(r8);
+        },
+        .call_a12 => {
+            const imm8 = cpu.fetch8();
+            const return_addr = cpu.pc;
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr & 0xFF);
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr >> 8);
+            const ad12 = ((@as(u16, dec.opcode & 0x10) << 7) |
+                (@as(u16, dec.opcode & 0x07) << 8) |
+                @as(u16, imm8));
+            cpu.pc = (cpu.pc & 0xF000) | ad12;
+        },
+        .callr => {
+            const lo = cpu.fetch8();
+            const hi = cpu.fetch8();
+            const offset = @as(u16, hi) << 8 | @as(u16, lo);
+            const return_addr = cpu.pc;
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr & 0xFF);
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr >> 8);
+            cpu.pc = return_addr +% offset -% 1;
+        },
+        .mov => {
+            const imm8 = cpu.fetch8();
+            const addr = readEA(cpu, dec);
+            cpu.store8(addr, imm8);
+        },
+        .mov_ri => {
+            const imm8 = cpu.fetch8();
+            const addr = readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?)));
+            cpu.store8(addr, imm8);
+        },
+        .be_imm, .be_d9, .be_ri => {
+            const val = readOp8(cpu, dec);
+            const r8 = cpu.fetch8();
+            cpu.psw.cy = cpu.a < val;
+            if (cpu.a == val) cpu.pc +%= signExt8(r8);
+        },
+        .bne_imm, .bne_d9, .bne_ri => {
+            const val = readOp8(cpu, dec);
+            const r8 = cpu.fetch8();
+            cpu.psw.cy = cpu.a < val;
+            if (cpu.a != val) cpu.pc +%= signExt8(r8);
+        },
+        .set1, .clr1, .not1 => {
+            const addr = readEA(cpu, dec);
+            const bit = @as(u3, @intCast(dec.bit.?));
+            const old = cpu.load8(addr);
+            const new = switch (dec.inst) {
+                .set1 => old | (@as(u8, 1) << bit),
+                .clr1 => old & ~(@as(u8, 1) << bit),
+                .not1 => old ^ (@as(u8, 1) << bit),
+                else => unreachable,
+            };
+            cpu.store8(addr, new);
+        },
+
+        else => {},
+    }
+    return cycles(dec);
+}
+
+fn signExt8(val: u8) u16 {
+    return @bitCast(@as(i16, @as(i8, @bitCast(val))));
+}
+
+fn readIndirectAddr(cpu: *Cpu, ri: u2) u9 {
+    const irbk = (@as(u8, @bitCast(cpu.psw)) >> 3) & 0b110;
+    const reg_addr: u4 = @truncate(irbk | @as(u4, ri));
+    const reg_val = cpu.ram_bank0[reg_addr];
+    const bit8: u9 = if (ri & 2 != 0) 0x100 else 0;
+    return bit8 | reg_val;
+}
+
+fn readEA(cpu: *Cpu, dec: DecodeResult) u9 {
+    return switch (dec.mode) {
+        .d9 => @as(u9, @truncate(decodeD9(dec.opcode, cpu.fetch8()))),
+        .ri => readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?))),
+        else => unreachable,
+    };
+}
+
+fn readOp8(cpu: *Cpu, dec: DecodeResult) u8 {
+    return switch (dec.mode) {
+        .imm => cpu.fetch8(),
+        .d9 => cpu.load8(@as(u9, @truncate(decodeD9(dec.opcode, cpu.fetch8())))),
+        .ri => cpu.load8(readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?)))),
+        else => unreachable,
+    };
+}
+
+pub fn decodeD9(opcode: u8, val: u8) u16 {
+    return @as(u16, opcode & 1) << 8 | val;
+}

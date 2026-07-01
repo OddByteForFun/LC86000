@@ -1,0 +1,6 @@
+.zig-cache/
+zig-out/
+*.zip
+.DS_Store
+todo.md
+data.md
