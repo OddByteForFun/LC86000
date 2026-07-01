@@ -531,7 +531,12 @@ pub fn step(cpu: *Cpu) u8 {
             const trr = (@as(u16, cpu.trh) << 8) | cpu.trl;
             cpu.a = cpu.inst_bank.data[trr +% cpu.a];
         },
-
+        .jmp_a12 => {
+            // a12 = nibble faible de l'opcode + imm8
+            const imm8 = cpu.fetch8(cpu.pc);
+            const ad12 = @as(u16, dec.opcode >> 4) << 8 | @as(u16, imm8);
+            cpu.pc = (cpu.pc & 0xF000) | ad12;
+        },
         else => {},
     }
     return cycles(dec);

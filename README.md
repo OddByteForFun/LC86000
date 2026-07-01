@@ -159,7 +159,7 @@ Le LC86k possède 70 instructions (p561) :
 | jmpf | 0x21 | 🟢 | Non | |
 | mov | 0x22–0x23 | 🟢 | Non | |
 | mov_ri | 0x24–0x27 | 🟢 | Non | |
-| jmp_a12 | 0x28–0x2F, 0x38–0x3F | 🔴 | Non | |
+| jmp_a12 | 0x28–0x2F, 0x38–0x3F | 🟢 | Non | |
 | mul | 0x30 | 🟢 | Oui | |
 | be_imm | 0x31 | 🟢 | Non | |
 | be_d9 | 0x32–0x33 | 🟢 | Non | |
