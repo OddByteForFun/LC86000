@@ -7,9 +7,9 @@
 | Composant | Détail |
 |-----------|--------|
 | CPU | 8-bit Sanyo LC86K87 |
-| Horloge | 32.8KHz quartz, 879.2kHz RC, 6MHz CF |
-| RAM | 256B applications + 256B BIOS + 512B WRAM |
-| ROM | 4KB OS + 16KB BIOS |
+| Horloge | 6 MHz (céramique) + 32.768 kHz (quartz RTC) |
+| RAM | 512B interne banquée (2×256B) + 198B XRAM LCD (2×96 + 6 icônes) |
+| ROM | 16KB BIOS |
 | Flash | 128KB (200 blocs), FAT8 |
 | Affichage | 48×32, monochrome |
 | Son | PWM 1 canal 8-bit |
@@ -18,7 +18,7 @@
 | Série | Maple (Dreamcast) + synchro 8-bit (VMU-VMU) |
 
 **Doc** : 
-reperépertoire doc /  
+répertoire doc /  
 Les références seront effectuées d'après le fichier VMU.pdf
 
 
@@ -197,7 +197,7 @@ Le LC86k possède 70 instructions (p561) :
 | subc_d9 | 0xB2–0xB3 | 🟢 | Non | |
 | subc_ri | 0xB4–0xB7 | 🟢 | Non | |
 | ror | 0xC0 | 🟢 | Oui | |
-| ldc | 0xC1 | 🔴 | Non | |
+| ldc | 0xC1 | 🟢 | Non | |
 | xch_d9 | 0xC2–0xC3 | 🟢 | Oui | |
 | xch_ri | 0xC4–0xC7 | 🟢 | Non | |
 | clr1 | 0xC8–0xCF, 0xD8–0xDF | 🟢 | Non | |
@@ -219,33 +219,33 @@ Le LC86k possède 70 instructions (p561) :
 
 | Status | Nb instructions |
 |--------|:--------------:|
-| 🟢 implémenté | 64 |
-| 🔴 manquant | 6 |
+| 🟢 implémenté | 65 |
+| 🔴 manquant | 5 |
 
 **Tests :** 44/44 passent ✅ (`zig build test`)
 
 ## TODO
 
-### Infrastructure CPU
-- [x] Registres pointeurs R0–R3
-- [x] Registre SP (stack pointer)
-- [ ] Flag N (negative), O (overflow), Ac (aux carry) dans le PSW
-- [ ] État `halted`
-- [ ] Vecteur de reset / adresse de démarrage
-- [ ] Gestion des interruptions (table de vecteurs, IE bit, priorités)
-- [ ] Memory map (ROM/RAM/SFR/XRAM/Flash séparés, banking)
-- [ ] Registres de fonction spéciale (SFR) — ~40 registres avec effets de bord
-- [ ] `decodeD9` : gérer le bit d8 à la bonne position (bit 0 standard, bit 4 pour bit-ops)
-- [ ] Adressage indirect @Ri : registres 8-bit, MSB = Ri.1, bancs IRBK
-- [x] Tests unitaires (44 tests, inspirés DreamPotato) ✅
-- [ ] Désassembleur
+### Ajout SFR autre que CPU (P0)
 
-### Instructions restantes (18)
-- [ ] jmp_a12 — saut 12-bit
-- [ ] bpc — branch si bit set + clear
-- [ ] dbnz_d9, dbnz_ri — décrémente et branche
-- [ ] reti — retour interrupt
-- [ ] ldc — load depuis ROM via TRH/TRL
+- [ ] Timers T0, T1, Base Timer — overflow, prescaler, 8/16-bit modes
+- [ ] I/O Ports P1, P3, P7 — boutons, état connexion
+- [ ] Contrôle LCD XBNK, VCCR, MCR, CNR, TDR
+- [ ] Contrôle Horloge OCR, ISL, division d'horloge
+- [ ] Interruptions IE, IP, I01Cr, I23Cr
+- [ ] Maple MPLSW, MPLSTA, MPLRST
+- [ ] Série SCON0/1, SBUF0/1, SBR
+- [ ] Flash FPR, EXT (bank switching)
+- [ ] Work RAM VRMAD, VTRBF
+- [ ] Power PCON (halt)
 
-### Bugs à corriger
-- [ ] ld_ri, st_ri — adresse 9-bit avec MSB = Ri.1, pas 16-bit
+### Autres (P1)
+- [ ] Interruptions : 10 sources avec vecteurs en ROM (0x0003-0x004B) : INT0 (connexion Dreamcast), INT1 (batterie faible), INT2 (Timer0), INT3 (Base Timer), T0H, T1, SIO0/1, Maple, P3 (boutons). Priorité, masquage, nesting.
+- [ ] Affichage : 48×32 monochrome depuis XRAM (2×96 + 6 icônes). Relativement simple une fois XRAM dispatché.
+- [ ] 1 bit PWM via T1L, buffer PCM 32kHz. Simple si le Timer 1 est implémenté.
+
+### Affichage + Filesystem (P2)
+- [ ] Maple Bus : Protocole de communication Dreamcast ↔ VMU. Requis pour charger des vms/vmu et pour l'intégration Flycast.
+- [ ] Filesystem Flash : 128KB, FAT8, 256 blocs de 512B. Root block, directory entries, import/export VMS/VMI. ≈1000 lignes.
+- [ ] Affichage de l'écran, capture des entrées clavier, émulation de l'horloge temps réel.
+

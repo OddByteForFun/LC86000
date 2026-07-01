@@ -1,14 +1,14 @@
 const std = @import("std");
 
 pub const Psw = packed struct(u8) {
-    p: bool = false,      // bit 0 — Parity (odd parity of ACC, read-only)
+    p: bool = false, // bit 0 — Parity (odd parity of ACC, read-only)
     rambk0: bool = false, // bit 1 — RAM bank select (0=bank0, 1=bank1)
-    ov: bool = false,     // bit 2 — Overflow (signed overflow)
-    irbk0: bool = false,  // bit 3 — Indirect register bank 0
-    irbk1: bool = false,  // bit 4 — Indirect register bank 1
-    _: bool = false,      // bit 5 — Reserved
-    ac: bool = false,     // bit 6 — Auxiliary Carry (carry from bit 3)
-    cy: bool = false,     // bit 7 — Carry (unsigned overflow)
+    ov: bool = false, // bit 2 — Overflow (signed overflow)
+    irbk0: bool = false, // bit 3 — Indirect register bank 0
+    irbk1: bool = false, // bit 4 — Indirect register bank 1
+    _: bool = false, // bit 5 — Reserved
+    ac: bool = false, // bit 6 — Auxiliary Carry (carry from bit 3)
+    cy: bool = false, // bit 7 — Carry (unsigned overflow)
 };
 
 pub const Cpu = struct {
@@ -19,18 +19,18 @@ pub const Cpu = struct {
     },
 
     // RAM space (512 octets, accédé par load/store)
-    ram_bank0: [256]u8,          // bank 0 : système + stack
-    ram_bank1: [256]u8,          // bank 1 : application
-    sfr_raw: [0x80]u8,           // backing store pour 0x100-0x17F
+    ram_bank0: [256]u8, // bank 0 : système + stack
+    ram_bank1: [256]u8, // bank 1 : application
+    sfr_raw: [0x80]u8, // backing store pour 0x100-0x17F
     xram_banks: struct {
-        bank0: [128]u8,          // XBNK=0 : LCD rows 0-15
-        bank1: [128]u8,          // XBNK=1 : LCD rows 16-31
-        bank2: [6]u8,            // XBNK=2 : icônes
+        bank0: [96]u8, // XBNK=0 : LCD rows 0-15 (6B/row)
+        bank1: [96]u8, // XBNK=1 : LCD rows 16-31 (6B/row)
+        bank2: [6]u8, // XBNK=2 : icônes
     },
-    work_ram: [512]u8,           // buffer DMA Maple (via VTRBF/VRMAD)
+    work_ram: [512]u8, // buffer DMA Maple (via VTRBF/VRMAD)
 
     // Flash storage (128KB)
-    flash: [131072]u8,           // 2 banks × 64KB, filesystem FAT
+    flash: [131072]u8, // 2 banks × 64KB, filesystem FAT
 
     // Registres CPU (convenience, synced avec sfr_raw)
     a: u8 = 0,
@@ -51,8 +51,8 @@ pub const Cpu = struct {
             .ram_bank1 = .{0} ** 256,
             .sfr_raw = .{0} ** 0x80,
             .xram_banks = .{
-                .bank0 = .{0} ** 128,
-                .bank1 = .{0} ** 128,
+                .bank0 = .{0} ** 96,
+                .bank1 = .{0} ** 96,
                 .bank2 = .{0} ** 6,
             },
             .work_ram = .{0} ** 512,
@@ -104,17 +104,25 @@ pub const Cpu = struct {
         }
     }
 
+    // il s'agit de définir les offsets utilisés par load8 qui ajoute 0x100 à ces valeurs.
+
     const SFR_ACC: u7 = 0x00;
-    const SFR_B: u7 = 0x01;
-    const SFR_C: u7 = 0x02;
-    const SFR_PSW: u7 = 0x04;
+    const SFR_PSW: u7 = 0x01;
+    const SFR_B: u7 = 0x02;
+    const SFR_C: u7 = 0x03;
+    const SFR_TRL: u7 = 0x04;
+    const SFR_TRH: u7 = 0x05;
     const SFR_SP: u7 = 0x06;
+    const SFR_IE: u7 = 0x08;
+    const SFR_IP: u7 = 0x09;
 
     pub fn loadSFR(self: *Cpu, offset: u7) u8 {
         return switch (offset) {
             SFR_ACC => self.a,
             SFR_B => self.b,
             SFR_C => self.c,
+            SFR_TRL => self.trl,
+            SFR_TRH => self.trh,
             SFR_PSW => @as(u8, @bitCast(self.psw)),
             SFR_SP => self.sp,
             else => self.sfr_raw[offset],
@@ -127,6 +135,8 @@ pub const Cpu = struct {
             SFR_ACC => self.a = val,
             SFR_B => self.b = val,
             SFR_C => self.c = val,
+            SFR_TRL => self.trl = val,
+            SFR_TRH => self.trh = val,
             SFR_PSW => self.psw = @bitCast(val),
             SFR_SP => self.sp = val,
             else => {},

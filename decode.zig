@@ -526,6 +526,11 @@ pub fn step(cpu: *Cpu) u8 {
             cpu.sp -%= 1;
             cpu.pc = (@as(u16, hi) << 8) | @as(u16, lo);
         },
+        .ldc => {
+            // (ACC) ← (BNK)((TRR) + (ACC)) [ROM]
+            const trr = (@as(u16, cpu.trh) << 8) | cpu.trl;
+            cpu.a = cpu.inst_bank.data[trr +% cpu.a];
+        },
 
         else => {},
     }
