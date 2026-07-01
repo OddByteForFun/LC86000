@@ -155,7 +155,7 @@ Le LC86k possède 70 instructions (p561) :
 | brf | 0x11 | 🟢 | Non | |
 | st | 0x12–0x13 | 🟢 | Oui | |
 | st_ri | 0x14–0x17 | 🟢 | Non | |
-| callf | 0x20 | 🔴 | Non | |
+| callf | 0x20 | 🟢 | Non | |
 | jmpf | 0x21 | 🔴 | Non | |
 | mov | 0x22–0x23 | 🟢 | Non | |
 | mov_ri | 0x24–0x27 | 🟢 | Non | |
@@ -187,7 +187,7 @@ Le LC86k possède 70 instructions (p561) :
 | addc_imm | 0x91 | 🟢 | Oui | |
 | addc_d9 | 0x92–0x93 | 🟢 | Non | |
 | addc_ri | 0x94–0x97 | 🟢 | Non | |
-| ret | 0xA0 | 🔴 | Non | |
+| ret | 0xA0 | 🟢 | Oui | |
 | sub_imm | 0xA1 | 🟢 | Oui | |
 | sub_d9 | 0xA2–0xA3 | 🟢 | Non | |
 | sub_ri | 0xA4–0xA7 | 🟢 | Non | |
@@ -219,9 +219,8 @@ Le LC86k possède 70 instructions (p561) :
 
 | Status | Nb instructions |
 |--------|:--------------:|
-| 🟢 implémenté | 55 |
-| 🟡 partiel / bug | 0 |
-| 🔴 manquant | 18 |
+| 🟢 implémenté | 63 |
+| 🔴 manquant | 7 |
 
 **Tests :** 43/43 passent ✅ (`zig build test`)
 

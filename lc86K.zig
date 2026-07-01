@@ -108,7 +108,7 @@ pub const Cpu = struct {
     const SFR_B: u7 = 0x01;
     const SFR_C: u7 = 0x02;
     const SFR_PSW: u7 = 0x04;
-    const SFR_SP: u7 = 0x05;
+    const SFR_SP: u7 = 0x06;
 
     pub fn loadSFR(self: *Cpu, offset: u7) u8 {
         return switch (offset) {

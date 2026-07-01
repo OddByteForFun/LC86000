@@ -471,13 +471,13 @@ pub fn step(cpu: *Cpu) u8 {
             cpu.pc = return_addr +% offset -% 1;
         },
         .mov => {
-            const imm8 = cpu.fetch8();
             const addr = readEA(cpu, dec);
+            const imm8 = cpu.fetch8();
             cpu.store8(addr, imm8);
         },
         .mov_ri => {
-            const imm8 = cpu.fetch8();
             const addr = readIndirectAddr(cpu, @as(u2, @intCast(dec.ri.?)));
+            const imm8 = cpu.fetch8();
             cpu.store8(addr, imm8);
         },
         .be_imm, .be_d9, .be_ri => {
@@ -503,6 +503,28 @@ pub fn step(cpu: *Cpu) u8 {
                 else => unreachable,
             };
             cpu.store8(addr, new);
+        },
+        .callf => {
+            const hi = cpu.fetch8();
+            const lo = cpu.fetch8();
+            const return_addr = cpu.pc;
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr & 0xFF);
+            cpu.sp +%= 1;
+            cpu.ram_bank0[cpu.sp] = @truncate(return_addr >> 8);
+            cpu.pc = (@as(u16, hi) << 8) | @as(u16, lo);
+        },
+        .jmpf => {
+            const hi = cpu.fetch8();
+            const lo = cpu.fetch8();
+            cpu.pc = (@as(u16, hi) << 8) | @as(u16, lo);
+        },
+        .ret => {
+            const hi = cpu.ram_bank0[cpu.sp];
+            cpu.sp -%= 1;
+            const lo = cpu.ram_bank0[cpu.sp];
+            cpu.sp -%= 1;
+            cpu.pc = (@as(u16, hi) << 8) | @as(u16, lo);
         },
 
         else => {},

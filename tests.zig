@@ -545,3 +545,52 @@ test "step returns correct cycle counts" {
     try testing.expectEqual(@as(u8, 7), step(&cpu));
     try testing.expectEqual(@as(u8, 1), step(&cpu));
 }
+
+test "MOV #SP, CALLF, INC ACC, RET sequence" {
+    var rom: [65536]u8 = undefined;
+    var cpu = makeCpu(&rom);
+
+    // MOV #0x1F,SP at 0FF9H: 23 06 1F
+    rom[0xFF9] = 0x23;
+    rom[0xFFA] = 0x06;
+    rom[0xFFB] = 0x1F;
+
+    // CALLF 0F0EH at 0FFCH: 20 0F 0E
+    rom[0xFFC] = 0x20;
+    rom[0xFFD] = 0x0F;
+    rom[0xFFE] = 0x0E;
+
+    // INC ACC at 0F0EH: 63 00
+    rom[0xF0E] = 0x63;
+    rom[0xF0F] = 0x00;
+
+    // RET at 0F10H: A0
+    rom[0xF10] = 0xA0;
+
+    // NOP at 0FFFH: 00
+    rom[0xFFF] = 0x00;
+
+    cpu.pc = 0xFF9;
+    cpu.a = 0xFF;
+
+    _ = step(&cpu); // MOV #0x1F,SP
+    try testing.expectEqual(@as(u8, 0x1F), cpu.sp);
+    try testing.expectEqual(@as(u16, 0xFFC), cpu.pc);
+
+    _ = step(&cpu); // CALLF 0F0EH
+    try testing.expectEqual(@as(u16, 0xF0E), cpu.pc);
+    try testing.expectEqual(@as(u8, 0x21), cpu.sp);
+    try testing.expectEqual(@as(u8, 0xFF), cpu.ram_bank0[0x20]);
+    try testing.expectEqual(@as(u8, 0x0F), cpu.ram_bank0[0x21]);
+
+    _ = step(&cpu); // INC ACC
+    try testing.expectEqual(@as(u8, 0x00), cpu.a);
+    try testing.expectEqual(@as(u16, 0xF10), cpu.pc);
+
+    _ = step(&cpu); // RET
+    try testing.expectEqual(@as(u16, 0xFFF), cpu.pc);
+    try testing.expectEqual(@as(u8, 0x1F), cpu.sp);
+
+    _ = step(&cpu); // NOP
+    try testing.expectEqual(@as(u16, 0x1000), cpu.pc);
+}
