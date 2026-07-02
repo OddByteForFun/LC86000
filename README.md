@@ -146,85 +146,91 @@ Le LC86k possède 70 instructions (p561) :
 
 | Instruction | Opcode(s) | Impl. | Test | Note |
 |-------------|-----------|:-----:|:----:|------|
-| nop | 0x00 | 🟢 | Oui | |
-| br | 0x01 | 🟢 | Oui | |
-| ld | 0x02–0x03 | 🟢 | Oui | |
-| ld_ri | 0x04–0x07 | 🟢 | Non | |
-| call_a12 | 0x08–0x0F, 0x18–0x1F | 🟢 | Oui | |
-| callr | 0x10 | 🟢 | Oui | |
-| brf | 0x11 | 🟢 | Non | |
-| st | 0x12–0x13 | 🟢 | Oui | |
-| st_ri | 0x14–0x17 | 🟢 | Non | |
-| callf | 0x20 | 🟢 | Non | |
-| jmpf | 0x21 | 🟢 | Non | |
-| mov | 0x22–0x23 | 🟢 | Non | |
-| mov_ri | 0x24–0x27 | 🟢 | Non | |
-| jmp_a12 | 0x28–0x2F, 0x38–0x3F | 🟢 | Non | |
+| nop | 0x00 | 🟢 | 🟢 | |
+| br | 0x01 | 🟢 | 🟢 | |
+| ld | 0x02–0x03 | 🟢 | 🟢 | |
+| ld_ri | 0x04–0x07 | 🟢 | 🔴 | |
+| call_a12 | 0x08–0x0F, 0x18–0x1F | 🟢 | 🟢 | |
+| callr | 0x10 | 🟢 | 🟢 | |
+| brf | 0x11 | 🟢 | 🔴 | |
+| st | 0x12–0x13 | 🟢 | 🟢 | |
+| st_ri | 0x14–0x17 | 🟢 | 🔴 | |
+| callf | 0x20 | 🟢 | 🔴 | |
+| jmpf | 0x21 | 🟢 | 🔴 | |
+| mov | 0x22–0x23 | 🟢 | 🔴 | |
+| mov_ri | 0x24–0x27 | 🟢 | 🔴 | |
+| jmp_a12 | 0x28–0x2F, 0x38–0x3F | 🟢 | 🔴 | |
 | mul | 0x30 | 🟢 | Oui | |
-| be_imm | 0x31 | 🟢 | Non | |
-| be_d9 | 0x32–0x33 | 🟢 | Non | |
-| be_ri | 0x34–0x37 | 🟢 | Non | |
-| div | 0x40 | 🟢 | Oui | |
-| bne_imm | 0x41 | 🟢 | Non | |
-| bne_d9 | 0x42–0x43 | 🟢 | Non | |
-| bne_ri | 0x44–0x47 | 🟢 | Non | |
-| bpc | 0x48–0x4F, 0x58–0x5F | 🔴 | Non | |
-| dbnz_d9 | 0x52–0x53 | 🔴 | Non | |
-| dbnz_ri | 0x54–0x57 | 🔴 | Non | |
-| push | 0x60–0x61 | 🟢 | Oui | |
-| inc_d9 | 0x62–0x63 | 🟢 | Oui | |
-| inc_ri | 0x64–0x67 | 🟢 | Non | |
-| bp | 0x68–0x6F, 0x78–0x7F | 🟢 | Oui | |
-| pop | 0x70–0x71 | 🟢 | Oui | |
-| dec_d9 | 0x72–0x73 | 🟢 | Oui | |
-| dec_ri | 0x74–0x77 | 🟢 | Non | |
-| bz | 0x80 | 🟢 | Oui | |
-| add_imm | 0x81 | 🟢 | Oui | |
-| add_d9 | 0x82–0x83 | 🟢 | Non | |
-| add_ri | 0x84–0x87 | 🟢 | Non | |
-| bn | 0x88–0x8F, 0x98–0x9F | 🟢 | Oui | |
-| bnz | 0x90 | 🟢 | Oui | |
-| addc_imm | 0x91 | 🟢 | Oui | |
-| addc_d9 | 0x92–0x93 | 🟢 | Non | |
-| addc_ri | 0x94–0x97 | 🟢 | Non | |
-| ret | 0xA0 | 🟢 | Oui | |
-| sub_imm | 0xA1 | 🟢 | Oui | |
-| sub_d9 | 0xA2–0xA3 | 🟢 | Non | |
-| sub_ri | 0xA4–0xA7 | 🟢 | Non | |
-| not1 | 0xA8–0xAF, 0xB8–0xBF | 🟢 | Non | |
-| reti | 0xB0 | 🔴 | Non | |
-| subc_imm | 0xB1 | 🟢 | Oui | |
-| subc_d9 | 0xB2–0xB3 | 🟢 | Non | |
-| subc_ri | 0xB4–0xB7 | 🟢 | Non | |
-| ror | 0xC0 | 🟢 | Oui | |
-| ldc | 0xC1 | 🟢 | Non | |
-| xch_d9 | 0xC2–0xC3 | 🟢 | Oui | |
-| xch_ri | 0xC4–0xC7 | 🟢 | Non | |
-| clr1 | 0xC8–0xCF, 0xD8–0xDF | 🟢 | Non | |
-| rorc | 0xD0 | 🟢 | Oui | |
-| or_imm | 0xD1 | 🟢 | Oui | |
-| or_d9 | 0xD2–0xD3 | 🟢 | Oui | |
-| or_ri | 0xD4–0xD7 | 🟢 | Non | |
-| rol | 0xE0 | 🟢 | Oui | |
-| and_imm | 0xE1 | 🟢 | Oui | |
-| and_d9 | 0xE2–0xE3 | 🟢 | Non | |
-| and_ri | 0xE4–0xE7 | 🟢 | Non | |
-| set1 | 0xE8–0xEF, 0xF8–0xFF | 🟢 | Non | |
-| rolc | 0xF0 | 🟢 | Oui | |
-| xor_imm | 0xF1 | 🟢 | Oui | |
-| xor_d9 | 0xF2–0xF3 | 🟢 | Non | |
-| xor_ri | 0xF4–0xF7 | 🟢 | Non | |
+| be_imm | 0x31 | 🟢 | 🔴 | |
+| be_d9 | 0x32–0x33 | 🟢 | 🔴 | |
+| be_ri | 0x34–0x37 | 🟢 | 🔴 | |
+| div | 0x40 | 🟢 | 🟢 | |
+| bne_imm | 0x41 | 🟢 | 🔴 | |
+| bne_d9 | 0x42–0x43 | 🟢 | 🔴 | |
+| bne_ri | 0x44–0x47 | 🟢 | 🔴 | |
+| bpc | 0x48–0x4F, 0x58–0x5F | 🟢 | 🔴 | |
+| dbnz_d9 | 0x52–0x53 | 🟢 | 🔴 | |
+| dbnz_ri | 0x54–0x57 | 🟢 | 🔴 | |
+| push | 0x60–0x61 | 🟢 | 🟢 | |
+| inc_d9 | 0x62–0x63 | 🟢 | 🟢 | |
+| inc_ri | 0x64–0x67 | 🟢 | 🔴 | |
+| bp | 0x68–0x6F, 0x78–0x7F | 🟢 | 🟢 | |
+| pop | 0x70–0x71 | 🟢 | 🟢 | |
+| dec_d9 | 0x72–0x73 | 🟢 | 🟢 | |
+| dec_ri | 0x74–0x77 | 🟢 | 🔴 | |
+| bz | 0x80 | 🟢 | 🟢 | |
+| add_imm | 0x81 | 🟢 | 🟢 | |
+| add_d9 | 0x82–0x83 | 🟢 | 🔴 | |
+| add_ri | 0x84–0x87 | 🟢 | 🔴 | |
+| bn | 0x88–0x8F, 0x98–0x9F | 🟢 | 🟢 | |
+| bnz | 0x90 | 🟢 | 🟢 | |
+| addc_imm | 0x91 | 🟢 | 🟢 | |
+| addc_d9 | 0x92–0x93 | 🟢 | 🔴 | |
+| addc_ri | 0x94–0x97 | 🟢 | 🔴 | |
+| ret | 0xA0 | 🟢 | 🟢 | |
+| sub_imm | 0xA1 | 🟢 | 🟢 | |
+| sub_d9 | 0xA2–0xA3 | 🟢 | 🔴 | |
+| sub_ri | 0xA4–0xA7 | 🟢 | 🔴 | |
+| not1 | 0xA8–0xAF, 0xB8–0xBF | 🟢 | 🔴 | |
+| reti | 0xB0 | 🟢 | 🔴 | |
+| subc_imm | 0xB1 | 🟢 | 🟢 | |
+| subc_d9 | 0xB2–0xB3 | 🟢 | 🔴 | |
+| subc_ri | 0xB4–0xB7 | 🟢 | 🔴 | |
+| ror | 0xC0 | 🟢 | 🟢 | |
+| ldc | 0xC1 | 🟢 | 🔴 | |
+| xch_d9 | 0xC2–0xC3 | 🟢 | 🟢 | |
+| xch_ri | 0xC4–0xC7 | 🟢 | 🔴 | |
+| clr1 | 0xC8–0xCF, 0xD8–0xDF | 🟢 | 🔴 | |
+| rorc | 0xD0 | 🟢 | 🟢 | |
+| or_imm | 0xD1 | 🟢 | 🟢 | |
+| or_d9 | 0xD2–0xD3 | 🟢 | 🟢 | |
+| or_ri | 0xD4–0xD7 | 🟢 | 🔴 | |
+| rol | 0xE0 | 🟢 | 🟢 | |
+| and_imm | 0xE1 | 🟢 | 🟢 | |
+| and_d9 | 0xE2–0xE3 | 🟢 | 🔴 | |
+| and_ri | 0xE4–0xE7 | 🟢 | 🔴 | |
+| set1 | 0xE8–0xEF, 0xF8–0xFF | 🟢 | 🔴 | |
+| rolc | 0xF0 | 🟢 | 🟢 | |
+| xor_imm | 0xF1 | 🟢 | 🟢 | |
+| xor_d9 | 0xF2–0xF3 | 🟢 | 🔴 | |
+| xor_ri | 0xF4–0xF7 | 🟢 | 🔴 | |
 
 ## Résumé
 
 | Status | Nb instructions |
 |--------|:--------------:|
-| 🟢 implémenté | 65 |
-| 🔴 manquant | 5 |
+| 🟢 implémenté | 70 |
+| 🟢 Testé | 20 |
+| 🔴 manquant | 50 |
 
 **Tests :** 44/44 passent ✅ (`zig build test`)
 
 ## TODO
+
+### Valdiation (P0)
+
+- [ ] Adapter les tests présents dans VMU.pdf afin de valider toutes les instructions
+
 
 ### Ajout SFR autre que CPU (P0)
 

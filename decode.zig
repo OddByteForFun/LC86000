@@ -537,6 +537,35 @@ pub fn step(cpu: *Cpu) u8 {
             const ad12 = @as(u16, dec.opcode >> 4) << 8 | @as(u16, imm8);
             cpu.pc = (cpu.pc & 0xF000) | ad12;
         },
+        .reti => {
+            // p624
+            // (PC15 to 8) ← ((SP)), (SP) ← (SP) - 1, (PC7 to 0) ← ((SP)), (SP) ← (SP) - 1
+            const hi = cpu.ram_bank0[cpu.sp];
+            cpu.sp -%= 1;
+            const lo = cpu.ram_bank0[cpu.sp];
+            cpu.sp -%= 1;
+            cpu.pc = (@as(u16, hi) << 8) | @as(u16, lo);
+        },
+        .dbnz_d9, .dbnz_ri => {
+            //(PC) ← (PC) + 3, (d9) = (d9)-1, if (d9) ≠ 0 then (PC) ← (PC) + r8
+            // (PC) ← (PC) + 2, ((Rj)) = ((Rj)) - 1, if ((Rj)) π 0 then (PC) ← (PC) + r8 j = 0, 1, 2, 3
+            const addr = readEA(cpu, dec);
+            const val = cpu.load8(addr) -% 1;
+            cpu.store8(addr, val);
+            const r8 = cpu.fetch8();
+            if (val != 0) cpu.pc +%= signExt8(r8);
+        },
+        .bpc => {
+            // BPC d9, b3, r8
+            // Branch near relative address if direct bit is one ("positive"), and clear
+            // 0 1 0d8 1b2b1b0 d7d6d5d4d3d2d1d0 r7r6r5r4r3r2r1r0 (48H to 4FH, 58H to 5FH)
+            // (PC) ← (PC) + 3, if (d9, b3) = 1 then (PC) ← (PC) + r8, (d9, b3) = 0
+            const addr = readEA(cpu, dec);
+            const r8 = cpu.fetch8();
+            const bit = @as(u3, @intcast(dec.bit.?));
+            const val = load8(cpu, addr);
+            if ((val >> bit) & 1 != 0) cpu.pc +%= signExt8(r8);
+        },
         else => {},
     }
     return cycles(dec);
